@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace RabbitMQ_ConsoleClient
 {
@@ -9,12 +11,9 @@ namespace RabbitMQ_ConsoleClient
         static void Main(string[] args)
         {
             Console.WriteLine("Rabbit MQ Console Application!");
-
-            using (RabbitMQHelper rabbitMQHelper = new RabbitMQHelper())
-            {
-                rabbitMQHelper.PublishMessage("Hi there");
-                rabbitMQHelper.PublishMessage("How are you?");
-            }
+            //RabbitMQ_Fanout.RunExample();
+            //RabbitMQ_Direct.RunExample();
+            RabbitMQ_Topic.RunExample();
         }
     }
 }
