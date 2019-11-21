@@ -7,8 +7,8 @@ namespace RabbitMQ_ConsoleClient
 {
     public class RabbitMQ_Topic : IDisposable
     {
-        IConnection conn;
-        IModel channel;
+        readonly IConnection conn;
+        readonly IModel channel;
 
         private const string QUEUE_NAME_1 = "my.queue1";
         private const string QUEUE_NAME_2 = "my.queue2";
