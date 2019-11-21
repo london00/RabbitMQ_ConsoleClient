@@ -90,7 +90,7 @@ namespace RabbitMQ_ConsoleClient.Alternate
             // Bind queues to the exchange
             channel.QueueBind(QUEUE_NAME_1, EXCHANGE_DIRECT_NAME, "video");
             channel.QueueBind(QUEUE_NAME_2, EXCHANGE_DIRECT_NAME, "image");
-            channel.QueueBind(QUEUE_NAME_UNROUTED, EXCHANGE_FANOUT_NAME, "text");
+            channel.QueueBind(QUEUE_NAME_UNROUTED, EXCHANGE_FANOUT_NAME, "");
         }
 
         public void PublishMessage(string message, string routingKey)
