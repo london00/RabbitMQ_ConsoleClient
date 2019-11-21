@@ -1,15 +1,12 @@
 ﻿using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
+using RabbitMQ_ConsoleClient.Base;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace RabbitMQ_ConsoleClient.Alternate
 {
-    public class RabbitMQ_AlternateQueue : IDisposable
+    public class RabbitMQ_AlternateQueue : RabbitMQ_Base, IDisposable
     {
-        private readonly IConnection conn;
-        private readonly IModel channel;
         private const string QUEUE_NAME_1 = "my.queue.1";
         private const string QUEUE_NAME_2 = "my.queue.2";
         private const string QUEUE_NAME_UNROUTED = "my.queue.unrouted";
@@ -22,30 +19,21 @@ namespace RabbitMQ_ConsoleClient.Alternate
             using (RabbitMQ_AlternateQueue rabbitMQHelper = new RabbitMQ_AlternateQueue())
             {
                 const string genericMessage = "Message with routing key";
-                rabbitMQHelper.PublishMessage($"{genericMessage} 'video'", "video");
-                rabbitMQHelper.PublishMessage($"{genericMessage} 'image'", "image");
-                rabbitMQHelper.PublishMessage($"{genericMessage} 'other'", "other");
+                rabbitMQHelper.PublishMessage(EXCHANGE_DIRECT_NAME, $"{genericMessage} 'video'", "video");
+                rabbitMQHelper.PublishMessage(EXCHANGE_DIRECT_NAME, $"{genericMessage} 'image'", "image");
+                rabbitMQHelper.PublishMessage(EXCHANGE_DIRECT_NAME, $"{genericMessage} 'other'", "other");
 
-                rabbitMQHelper.ActiveListeninFromQueue();
+                rabbitMQHelper.ActiveListeninFromQueue(QUEUE_NAME_1);
+                rabbitMQHelper.ActiveListeninFromQueue(QUEUE_NAME_2);
+                rabbitMQHelper.ActiveListeninFromQueue(QUEUE_NAME_UNROUTED);
+
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadLine();
             }
         }
 
-        private RabbitMQ_AlternateQueue()
+        private RabbitMQ_AlternateQueue() : base()
         {
-            var factory = new ConnectionFactory
-            {
-                HostName = "localhost",
-                VirtualHost = "/",
-                Port = 5672,
-                UserName = "guest",
-                Password = "guest"
-            };
-
-            conn = factory.CreateConnection();
-            channel = conn.CreateModel();
-
             // Declare fanout exchange
             channel.ExchangeDeclare(
                 exchange: EXCHANGE_FANOUT_NAME,
@@ -93,46 +81,10 @@ namespace RabbitMQ_ConsoleClient.Alternate
             channel.QueueBind(QUEUE_NAME_UNROUTED, EXCHANGE_FANOUT_NAME, "");
         }
 
-        public void PublishMessage(string message, string routingKey)
-        {
-            byte[] body = Encoding.UTF8.GetBytes(message);
-            channel.BasicPublish(EXCHANGE_DIRECT_NAME, routingKey, null, body);
-        }
-
-        public void ActiveListeninFromQueue()
-        {
-            var consumer = new EventingBasicConsumer(channel);
-            consumer.Received += Consumer_Received;
-
-            var consumerTag1 = channel.BasicConsume(QUEUE_NAME_1, true, consumer);
-            var consumerTag2 = channel.BasicConsume(QUEUE_NAME_2, true, consumer);
-            var consumerTag3 = channel.BasicConsume(QUEUE_NAME_UNROUTED, true, consumer);
-        }
-
-        private void Consumer_Received(object sender, BasicDeliverEventArgs e)
-        {
-            string message = Encoding.UTF8.GetString(e.Body);
-
-            Console.WriteLine($"Message received: [Exchange: {e.Exchange}] [RoutingKey: {e.RoutingKey}] ---> {message}");
-
-            //channel.BasicAck(e.DeliveryTag, false);
-        }
-
-        public void DeleteQueues()
-        {
-            channel.QueueDelete(QUEUE_NAME_1);
-            channel.QueueDelete(QUEUE_NAME_UNROUTED);
-        }
-
-        public void DeleteExchanges()
-        {
-            channel.ExchangeDelete(EXCHANGE_DIRECT_NAME);
-        }
-
         public void Dispose()
         {
-            DeleteQueues();
-            DeleteExchanges();
+            DeleteExchanges(new []{ EXCHANGE_DIRECT_NAME, EXCHANGE_FANOUT_NAME });
+            DeleteQueues(new[] { QUEUE_NAME_1, QUEUE_NAME_2, QUEUE_NAME_UNROUTED });
             channel.Close();
             conn.Close();
         }

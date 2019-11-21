@@ -1,15 +1,11 @@
 ﻿using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
+using RabbitMQ_ConsoleClient.Base;
 using System;
-using System.Text;
 
 namespace RabbitMQ_ConsoleClient
 {
-    public class RabbitMQ_Topic : IDisposable
+    public class RabbitMQ_Topic : RabbitMQ_Base, IDisposable
     {
-        readonly IConnection conn;
-        readonly IModel channel;
-
         private const string QUEUE_NAME_1 = "my.queue1";
         private const string QUEUE_NAME_2 = "my.queue2";
         private const string QUEUE_NAME_3 = "my.queue3";
@@ -20,9 +16,9 @@ namespace RabbitMQ_ConsoleClient
             // Receive messages
             using (RabbitMQ_Topic rabbitMQHelper = new RabbitMQ_Topic())
             {
-                rabbitMQHelper.PublishMessage("Hi there, how are you?", "convert.image.bpm");
-                rabbitMQHelper.PublishMessage("Are you there? There is a problem!", "convert.bitmap.image");
-                rabbitMQHelper.PublishMessage("The server is down!! Please come here inmediatly!", "image.bitmap.32bit");
+                rabbitMQHelper.PublishMessage(EXCHANGE_NAME, "Hi there, how are you?", "convert.image.bpm");
+                rabbitMQHelper.PublishMessage(EXCHANGE_NAME, "Are you there? There is a problem!", "convert.bitmap.image");
+                rabbitMQHelper.PublishMessage(EXCHANGE_NAME, "The server is down!! Please come here inmediatly!", "image.bitmap.32bit");
 
                 rabbitMQHelper.ActiveListeninFromQueue(RabbitMQ_Topic.QUEUE_NAME_1);
                 rabbitMQHelper.ActiveListeninFromQueue(RabbitMQ_Topic.QUEUE_NAME_2);
@@ -32,20 +28,8 @@ namespace RabbitMQ_ConsoleClient
             }
         }
 
-        private RabbitMQ_Topic()
+        private RabbitMQ_Topic(): base()
         {
-            var factory = new ConnectionFactory
-            {
-                HostName = "localhost",
-                VirtualHost = "/",
-                Port = 5672,
-                UserName = "guest",
-                Password = "guest"
-            };
-
-            conn = factory.CreateConnection();
-            channel = conn.CreateModel();
-
             // Declare exchange
             channel.ExchangeDeclare(
                 exchange: EXCHANGE_NAME,
@@ -85,45 +69,10 @@ namespace RabbitMQ_ConsoleClient
             channel.QueueBind(QUEUE_NAME_3, EXCHANGE_NAME, "image.#");
         }
 
-        public void PublishMessage(string message, string routingKey)
-        {
-            byte[] body = Encoding.UTF8.GetBytes(message);
-            channel.BasicPublish(EXCHANGE_NAME, routingKey, null, body);
-        }
-
-        public void ActiveListeninFromQueue(string queueName)
-        {
-            var consumer = new EventingBasicConsumer(channel);
-            consumer.Received += Consumer_Received;
-
-            var consumerTag = channel.BasicConsume(queueName, true, consumer);
-        }
-
-        private void Consumer_Received(object sender, BasicDeliverEventArgs e)
-        {
-            string message = Encoding.UTF8.GetString(e.Body);
-
-            Console.WriteLine($"Message received: {message}");
-
-            //channel.BasicAck(e.DeliveryTag, false);
-        }
-
-        public void DeleteQueues()
-        {
-            channel.QueueDelete(QUEUE_NAME_1);
-            channel.QueueDelete(QUEUE_NAME_2);
-            channel.QueueDelete(QUEUE_NAME_3);
-        }
-
-        public void DeleteExchanges()
-        {
-            channel.ExchangeDelete(EXCHANGE_NAME);
-        }
-
         public void Dispose()
         {
-            DeleteQueues();
-            DeleteExchanges();
+            DeleteQueues(new[] { QUEUE_NAME_1, QUEUE_NAME_2, QUEUE_NAME_3 });
+            DeleteExchanges(new[] { EXCHANGE_NAME });
             channel.Close();
             conn.Close();
         }
